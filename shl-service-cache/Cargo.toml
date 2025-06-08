@@ -11,5 +11,8 @@ serde_json = "1.0.140"
 rustis = "0.13.3"
 thiserror = "2.0.12"
 
+[dev-dependencies]
+tokio = { version = "1.45.0", default-features = false, features = ["rt-multi-thread"] }
+
 [features]
 macro = ["dep:shl-service-cache-macro"]

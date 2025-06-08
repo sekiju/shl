@@ -8,7 +8,7 @@ pub use shl_service_cache_macro::*;
 
 use crate::error::Error;
 use rustis::client::Client;
-use rustis::commands::{GenericCommands, StringCommands};
+use rustis::commands::{GenericCommands, ScanOptions, StringCommands};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -48,8 +48,22 @@ impl CacheService {
     }
 
     pub async fn delete_pattern(&self, pattern: &str) -> Result<(), Error> {
-        let keys: Vec<String> = self.client.keys(pattern).await?;
-        self.client.unlink(keys).await?;
+        let mut cursor = 0_u64;
+
+        loop {
+            let (next, keys): (u64, Vec<String>) = self.client.scan(cursor, ScanOptions::default().match_pattern(pattern)).await?;
+
+            if !keys.is_empty() {
+                self.client.unlink(keys).await?;
+            }
+
+            if next == 0 {
+                break;
+            }
+
+            cursor = next;
+        }
+
         Ok(())
     }
 
@@ -57,5 +71,89 @@ impl CacheService {
         let keys: Vec<String> = keys.into_iter().map(|k| k.as_ref().to_string()).collect();
         self.client.unlink(keys).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rustis::client::Client;
+    use rustis::commands::{FlushingMode, ServerCommands};
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    struct TestData {
+        value: String,
+    }
+    
+    async fn setup() -> CacheService {
+        let client = Client::connect("redis://127.0.0.1/").await.unwrap();
+        client.flushall(FlushingMode::Default).await.unwrap();
+        CacheService::new(client, 60)
+    }
+
+    #[tokio::test]
+    async fn test_set_and_get() {
+        let cache = setup().await;
+        let data = TestData { value: "test".into() };
+
+        cache.set("key", &data).await.unwrap();
+        let retrieved: Option<TestData> = cache.get("key").await;
+
+        assert_eq!(retrieved, Some(data));
+    }
+
+    #[tokio::test]
+    async fn test_get_nonexistent() {
+        let cache = setup().await;
+
+        let retrieved: Option<TestData> = cache.get("nonexistent").await;
+
+        assert_eq!(retrieved, None);
+    }
+
+    #[tokio::test]
+    async fn test_delete() {
+        let cache = setup().await;
+        let data = TestData { value: "delete".into() };
+
+        cache.set("to_delete", &data).await.unwrap();
+        cache.delete("to_delete").await.unwrap();
+
+        let retrieved: Option<TestData> = cache.get("to_delete").await;
+
+        assert_eq!(retrieved, None);
+    }
+
+    #[tokio::test]
+    async fn test_delete_pattern() {
+        let cache = setup().await;
+
+        cache.set("pattern_1", &"data1").await.unwrap();
+        cache.set("pattern_2", &"data2").await.unwrap();
+
+        cache.delete_pattern("pattern_*").await.unwrap();
+
+        let res1: Option<String> = cache.get("pattern_1").await;
+        let res2: Option<String> = cache.get("pattern_2").await;
+
+        assert_eq!(res1, None);
+        assert_eq!(res2, None);
+    }
+
+    #[tokio::test]
+    async fn test_delete_many() {
+        let cache = setup().await;
+
+        cache.set("key1", &"data1").await.unwrap();
+        cache.set("key2", &"data2").await.unwrap();
+
+        cache.delete_many(vec!["key1", "key2"]).await.unwrap();
+
+        let res1: Option<String> = cache.get("key1").await;
+        let res2: Option<String> = cache.get("key2").await;
+
+        assert_eq!(res1, None);
+        assert_eq!(res2, None);
     }
 }
