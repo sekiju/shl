@@ -120,11 +120,10 @@ pub fn cache(args: TokenStream, input: TokenStream) -> TokenStream {
             continue;
         }
 
-        if let FnArg::Typed(pat_type) = arg {
-            if let Pat::Ident(PatIdent { ident, .. }) = &*pat_type.pat {
+        if let FnArg::Typed(pat_type) = arg
+            && let Pat::Ident(PatIdent { ident, .. }) = &*pat_type.pat {
                 arg_idents.push(ident);
             }
-        }
     }
 
     let delete_keys_expr = if !args.delete_keys.is_empty() {
@@ -136,7 +135,7 @@ pub fn cache(args: TokenStream, input: TokenStream) -> TokenStream {
             if !placeholders.is_empty() {
                 let mut formatted_key = key_template.clone();
                 for idx in &placeholders {
-                    formatted_key = formatted_key.replace(&format!("{{{}}}", idx), "{}");
+                    formatted_key = formatted_key.replace(&format!("{{{idx}}}"), "{}");
                 }
 
                 let format_args: Vec<_> = placeholders
@@ -170,7 +169,7 @@ pub fn cache(args: TokenStream, input: TokenStream) -> TokenStream {
         let format_expr = if !placeholders.is_empty() {
             let mut formatted_key = cache_key_template.clone();
             for idx in &placeholders {
-                formatted_key = formatted_key.replace(&format!("{{{}}}", idx), "{}");
+                formatted_key = formatted_key.replace(&format!("{{{idx}}}"), "{}");
             }
 
             let format_args: Vec<_> = placeholders
