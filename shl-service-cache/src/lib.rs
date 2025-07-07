@@ -85,7 +85,7 @@ mod tests {
     struct TestData {
         value: String,
     }
-    
+
     async fn setup() -> CacheService {
         let client = Client::connect("redis://127.0.0.1/").await.unwrap();
         client.flushall(FlushingMode::Default).await.unwrap();

@@ -24,7 +24,7 @@
 /// ```
 /// impl_base_sqlx_methods!(User, "users", with_update,
 ///     id => Uuid,
-///     username => String, 
+///     username => String,
 ///     email => String,
 ///     created_at => DateTime<Utc>,
 ///     updated_at => Option<DateTime<Utc>>
