@@ -1,0 +1,18 @@
+[package]
+name = "shl-observability"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+cfg-if.workspace = true
+metrics = { version = "0.24", optional = true }
+metrics-exporter-prometheus = { version = "0.17", optional = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+ntex = { version = "2", optional = true }
+
+[features]
+tracing = ["dep:tracing-subscriber"]
+metrics = ["dep:metrics", "metrics-exporter-prometheus"]
+ntex = ["dep:ntex"]
