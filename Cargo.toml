@@ -1,5 +1,7 @@
 [workspace]
 members = [
+    "macros/ntex-error-macro",
+    "shl-ntex",
     "shl-observability",
     "shl-redis-cache-macro",
     "shl-redis-cache-service",
