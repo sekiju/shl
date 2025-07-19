@@ -53,7 +53,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
             let fields_arm = match &variant.fields {
                 Fields::Named(fields_named) => {
                     let field_idents: Vec<_> = fields_named.named.iter().map(|f| f.ident.as_ref().unwrap()).collect();
-                    let pattern = quote! { Self::#var_ident { #(ref #field_idents),* } };
+                    let pattern = quote! { Self::#var_ident { #(#field_idents),* } };
                     let inserts = field_idents.iter().map(|&ident| {
                         quote! { map.insert(stringify!(#ident).to_string(), #ident.to_string()); }
                     });
@@ -68,7 +68,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                 Fields::Unnamed(fields_unnamed) => {
                     let num = fields_unnamed.unnamed.len();
                     let field_patterns: Vec<_> = (0..num).map(|i| format_ident!("_{}", i)).collect();
-                    let pattern = quote! { Self::#var_ident(#(ref #field_patterns),*) };
+                    let pattern = quote! { Self::#var_ident(#(#field_patterns),*) };
                     let inserts = (0..num).zip(field_patterns.iter()).map(|(i, ident)| {
                         let i_lit = LitStr::new(&i.to_string(), Span::call_site());
                         quote! { map.insert(#i_lit.to_string(), #ident.to_string()); }
