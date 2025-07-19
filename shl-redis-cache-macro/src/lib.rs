@@ -187,8 +187,10 @@ pub fn cache(args: TokenStream, input: TokenStream) -> TokenStream {
             #fn_vis #fn_asyncness fn #fn_name #fn_generics (#fn_args) #fn_output {
                 let cache_key = #format_expr;
 
-                if let Some(cached_result) = self.cache_service.get(&cache_key).await {
-                    return Ok(cached_result);
+                match self.cache_service.get(&cache_key).await {
+                    Ok(Some(cached_result)) => return Ok(cached_result),
+                    Ok(None) => {},
+                    Err(_) => {},
                 }
 
                 let result = #fn_body;
