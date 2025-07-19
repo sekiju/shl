@@ -4,10 +4,10 @@ version = "0.1.0"
 edition.workspace = true
 publish.workspace = true
 
+[features]
+error = ["dep:ntex-error-macro", "dep:serde"]
+
 [dependencies]
 ntex = "2"
 ntex-error-macro = { path = "../macros/ntex-error-macro", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
-
-[features]
-error = ["dep:ntex-error-macro", "dep:serde"]
