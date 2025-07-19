@@ -55,7 +55,6 @@
 /// - `sqlx` with PostgreSQL feature
 /// - `uuid` for Uuid type
 /// - `chrono` for DateTime
-/// - Custom `Error` type with `RowNotFound` variant
 #[macro_export]
 macro_rules! impl_base_sqlx_methods {
     ($struct_name:ident, $table_name:expr, $($field_name:ident => $field_type:ty),* $(,)?) => {
@@ -69,7 +68,7 @@ macro_rules! impl_base_sqlx_methods {
                 count
             };
 
-            pub async fn find_by_id(pool: &PgPool, id: Uuid) -> Result<Self, sqlx::Error> {
+            pub async fn find_by_id(pool: &sqlx::PgPool, id: Uuid) -> Result<Self, sqlx::Error> {
                 sqlx::query_as::<_, Self>(
                     &format!("SELECT * FROM {} WHERE id = $1", $table_name)
                 )
@@ -78,7 +77,7 @@ macro_rules! impl_base_sqlx_methods {
                 .await
             }
 
-            pub async fn list_all(pool: &PgPool) -> Result<Vec<Self>, sqlx::Error> {
+            pub async fn list_all(pool: &sqlx::PgPool) -> Result<Vec<Self>, sqlx::Error> {
                 sqlx::query_as::<_, Self>(
                     &format!("SELECT * FROM {} ORDER BY created_at DESC", $table_name)
                 )
@@ -86,7 +85,7 @@ macro_rules! impl_base_sqlx_methods {
                 .await
             }
 
-            pub async fn insert(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
+            pub async fn insert(&self, pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
                 let field_count = Self::FIELD_COUNT;
 
                 let query = format!(
@@ -108,7 +107,7 @@ macro_rules! impl_base_sqlx_methods {
                 Ok(())
             }
 
-            pub async fn delete(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
+            pub async fn delete(&self, pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
                 let result = sqlx::query(
                     &format!("DELETE FROM {} WHERE id = $1", $table_name)
                 )
@@ -129,7 +128,7 @@ macro_rules! impl_base_sqlx_methods {
         impl_base_sqlx_methods!($struct_name, $table_name, $($field_name => $field_type),*);
 
         impl $struct_name {
-            pub async fn update(&self, pool: &PgPool) -> Result<(), sqlx::Error> {
+            pub async fn update(&self, pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
                 let field_count = Self::FIELD_COUNT;
 
                 let mut updates = Vec::new();
