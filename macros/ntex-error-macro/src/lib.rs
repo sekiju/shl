@@ -15,7 +15,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
     if let Data::Enum(data_enum) = &input.data {
         for variant in &data_enum.variants {
             let var_ident = &variant.ident;
-            let mut status = quote! { StatusCode::INTERNAL_SERVER_ERROR };
+            let mut status = quote! { ntex::web::StatusCode::INTERNAL_SERVER_ERROR };
             let mut err_name = var_ident.to_string().to_lowercase();
 
             for attr in &variant.attrs {
@@ -25,7 +25,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                             let value: LitStr = meta.value()?.parse()?;
                             let status_str = value.value().to_uppercase();
                             let status_ident = format_ident!("{}", status_str);
-                            status = quote! { StatusCode::#status_ident };
+                            status = quote! { ntex::web::StatusCode::#status_ident };
                         } else if meta.path.is_ident("name") {
                             let value: LitStr = meta.value()?.parse()?;
                             err_name = value.value();
@@ -96,8 +96,8 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
     }
 
     let expanded = quote! {
-        impl WebResponseError for #name {
-            fn status_code(&self) -> StatusCode {
+        impl ntex::web::WebResponseError for #name {
+            fn status_code(&self) -> ntex::web::StatusCode {
                 match self {
                     #(#arms_status)*
                 }
