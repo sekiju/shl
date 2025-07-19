@@ -72,6 +72,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.88"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "atoi"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2013,6 +2024,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustis"
+version = "0.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf1ac5efbacd92e274586a56c0aed953b9144c4a4826e8edbb3c8cbeda26651f"
+dependencies = [
+ "atoi",
+ "bytes",
+ "crc16",
+ "dtoa",
+ "fast-float2",
+ "futures-channel",
+ "futures-util",
+ "itoa",
+ "log",
+ "memchr",
+ "rand 0.9.1",
+ "serde",
+ "smallvec",
+ "socket2 0.6.0",
+ "tokio",
+ "tokio-util",
+ "url",
+]
+
+[[package]]
 name = "rustix"
 version = "0.38.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2157,9 +2193,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.140"
+version = "1.0.141"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
+checksum = "30b9eff21ebe718216c6ec64e1d9ac57087aad11efc64e32002bce4a0d4c03d3"
 dependencies = [
  "itoa",
  "memchr",
@@ -2234,10 +2270,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "shl-redis-cache-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
+name = "shl-redis-cache-service"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "rustis 0.16.1",
+ "serde",
+ "serde_json",
+ "shl-redis-cache-macro",
+ "thiserror",
+]
+
+[[package]]
 name = "shl-service-cache"
 version = "0.1.0"
 dependencies = [
- "rustis",
+ "rustis 0.15.2",
  "serde",
  "serde_json",
  "shl-service-cache-macro",

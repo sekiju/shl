@@ -1,5 +1,5 @@
 [workspace]
-members = ["shl-service-cache", "shl-service-cache-macro", "shl-sqlx", "shl-observability"]
+members = ["shl-service-cache", "shl-service-cache-macro", "shl-sqlx", "shl-observability", "shl-redis-cache-service", "shl-redis-cache-macro"]
 resolver = "3"
 
 [workspace.package]
