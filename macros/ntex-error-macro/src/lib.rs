@@ -102,7 +102,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                     #(#arms_status)*
                 }
             }
-            fn error_response(&self, req: &HttpRequest) -> HttpResponse {
+            fn error_response(&self, req: &ntex::web::HttpRequest) -> ntex::web::HttpResponse {
                 let code = match self {
                     #(#arms_name)*
                 };
@@ -114,7 +114,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                     message: self.to_string(),
                     fields,
                 };
-                HttpResponse::build(self.status_code()).json(&result)
+                ntex::web::HttpResponse::build(self.status_code()).json(&result)
             }
         }
     };
