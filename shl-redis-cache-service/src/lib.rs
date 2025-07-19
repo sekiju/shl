@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 #[cfg(feature = "macro")]
 pub use shl_redis_cache_macro::*;
 
-mod error;
+pub mod error;
 #[cfg(feature = "rustis")]
 pub mod rustis;
 
