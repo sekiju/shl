@@ -121,9 +121,10 @@ pub fn cache(args: TokenStream, input: TokenStream) -> TokenStream {
         }
 
         if let FnArg::Typed(pat_type) = arg
-            && let Pat::Ident(PatIdent { ident, .. }) = &*pat_type.pat {
-                arg_idents.push(ident);
-            }
+            && let Pat::Ident(PatIdent { ident, .. }) = &*pat_type.pat
+        {
+            arg_idents.push(ident);
+        }
     }
 
     let delete_keys_expr = if !args.delete_keys.is_empty() {

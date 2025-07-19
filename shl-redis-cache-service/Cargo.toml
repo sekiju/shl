@@ -4,14 +4,14 @@ version = "0.1.0"
 edition.workspace = true
 publish.workspace = true
 
-[dependencies]
-async-trait = "0.1"
-thiserror = "2"
-serde = "1"
-serde_json = "1"
-rustis = { version = "0.16", optional = true }
-shl-redis-cache-macro = { path = "../shl-redis-cache-macro", optional = true }
-
 [features]
 macro = ["dep:shl-redis-cache-macro"]
 rustis = ["dep:rustis"]
+
+[dependencies]
+async-trait = "0.1"
+rustis = { version = "0.16", optional = true }
+serde = "1"
+serde_json = "1"
+shl-redis-cache-macro = { path = "../shl-redis-cache-macro", optional = true }
+thiserror = "2"
