@@ -1,7 +1,25 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, quote};
-use syn::{Data, DeriveInput, Fields, LitStr, parse_macro_input};
+use syn::{Data, DeriveInput, Fields, LitStr, parse_macro_input, Expr};
+
+fn to_snake_case(s: &str) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch.is_uppercase() {
+            if !result.is_empty() && !result.ends_with('_') {
+                result.push('_');
+            }
+            result.push(ch.to_lowercase().next().unwrap());
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
+}
 
 #[proc_macro_derive(NtexError, attributes(ntex_response))]
 pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
@@ -16,7 +34,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
         for variant in &data_enum.variants {
             let var_ident = &variant.ident;
             let mut status = quote! { ntex::http::StatusCode::INTERNAL_SERVER_ERROR };
-            let mut err_name = var_ident.to_string().to_lowercase();
+            let mut err_name = to_snake_case(&var_ident.to_string());
 
             let mut has_from_attr = false;
             let mut include_fields = true;
@@ -24,11 +42,16 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
             for attr in &variant.attrs {
                 if attr.path().is_ident("ntex_response") {
                     let _ = attr.parse_nested_meta(|meta| {
-                        if meta.path.is_ident("status") {
-                            let value: LitStr = meta.value()?.parse()?;
-                            let status_str = value.value().to_uppercase();
-                            let status_ident = format_ident!("{}", status_str);
-                            status = quote! { ntex::http::StatusCode::#status_ident };
+                        if meta.path.is_ident("status") || meta.path.is_ident("status_code") {
+                            if let Ok(value) = meta.value() {
+                                if let Ok(lit_str) = value.parse::<LitStr>() {
+                                    let status_str = lit_str.value().to_uppercase();
+                                    let status_ident = format_ident!("{}", status_str);
+                                    status = quote! { ntex::http::StatusCode::#status_ident };
+                                } else if let Ok(expr) = value.parse::<Expr>() {
+                                    status = quote! { #expr };
+                                }
+                            }
                         } else if meta.path.is_ident("name") {
                             let value: LitStr = meta.value()?.parse()?;
                             err_name = value.value();
