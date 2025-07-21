@@ -27,8 +27,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
     let name = &input.ident;
 
     let mut arms_status = Vec::new();
-    let mut arms_name = Vec::new();
-    let mut arms_fields = Vec::new();
+    let mut arms_error_response = Vec::new();
 
     if let Data::Enum(data_enum) = &input.data {
         for variant in &data_enum.variants {
@@ -114,59 +113,14 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                 });
             }
 
+            let is_wrapper = matches!(&variant.fields, Fields::Unnamed(f) if f.unnamed.len() == 1) && has_from_attr;
+
             let err_name_lit = LitStr::new(&err_name, Span::call_site());
 
-            let pattern = match &variant.fields {
-                Fields::Unnamed(_) => quote! { Self::#var_ident(..) },
-                Fields::Named(_) => quote! { Self::#var_ident { .. } },
-                Fields::Unit => quote! { Self::#var_ident },
-            };
-
-            arms_status.push(quote! {
-                #pattern => #status,
-            });
-            arms_name.push(quote! {
-                #pattern => #err_name_lit,
-            });
-
-            let fields_arm = if include_fields {
-                match &variant.fields {
-                    Fields::Named(fields_named) => {
-                        let field_idents: Vec<_> = fields_named.named.iter().map(|f| f.ident.as_ref().unwrap()).collect();
-                        let pattern = quote! { Self::#var_ident { #(#field_idents),* } };
-                        let inserts = field_idents.iter().map(|&ident| {
-                            quote! { map.insert(stringify!(#ident).to_string(), #ident.to_string()); }
-                        });
-                        quote! {
-                            #pattern => {
-                                let mut map = ::std::collections::HashMap::new();
-                                #(#inserts)*
-                                Some(map)
-                            },
-                        }
-                    }
-                    Fields::Unnamed(fields_unnamed) => {
-                        let num = fields_unnamed.unnamed.len();
-                        let field_patterns: Vec<_> = (0..num).map(|i| format_ident!("_{}", i)).collect();
-                        let pattern = quote! { Self::#var_ident(#(#field_patterns),*) };
-                        let inserts = (0..num).zip(field_patterns.iter()).map(|(i, ident)| {
-                            let i_lit = LitStr::new(&i.to_string(), Span::call_site());
-                            quote! { map.insert(#i_lit.to_string(), #ident.to_string()); }
-                        });
-                        quote! {
-                            #pattern => {
-                                let mut map = ::std::collections::HashMap::new();
-                                #(#inserts)*
-                                Some(map)
-                            },
-                        }
-                    }
-                    Fields::Unit => {
-                        let pattern = quote! { Self::#var_ident };
-                        quote! {
-                            #pattern => None,
-                        }
-                    }
+            // Status arm
+            let status_arm = if is_wrapper {
+                quote! {
+                    Self::#var_ident(ref inner) => inner.status_code(),
                 }
             } else {
                 let pattern = match &variant.fields {
@@ -175,11 +129,72 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                     Fields::Unit => quote! { Self::#var_ident },
                 };
                 quote! {
-                    #pattern => None,
+                    #pattern => #status,
                 }
             };
+            arms_status.push(status_arm);
 
-            arms_fields.push(fields_arm);
+            // Error response arm
+            if is_wrapper {
+                let wrapper_arm = quote! {
+                    Self::#var_ident(ref inner) => inner.error_response(req),
+                };
+                arms_error_response.push(wrapper_arm);
+            } else {
+                let (pattern, expr_fields) = if !include_fields {
+                    let pattern = match &variant.fields {
+                        Fields::Unit => quote! { Self::#var_ident },
+                        _ => quote! { Self::#var_ident(..) },
+                    };
+                    (pattern, quote! { None })
+                } else {
+                    match &variant.fields {
+                        Fields::Unit => {
+                            let pattern = quote! { Self::#var_ident };
+                            (pattern, quote! { None })
+                        }
+                        Fields::Named(fields_named) => {
+                            let field_idents: Vec<_> = fields_named.named.iter().map(|f| f.ident.as_ref().unwrap()).collect();
+                            let pattern = quote! { Self::#var_ident { #(#field_idents),* } };
+                            let inserts = field_idents.iter().map(|&ident| {
+                                quote! { map.insert(stringify!(#ident).to_string(), #ident.to_string()); }
+                            });
+                            let expr_fields = quote! {
+                                let mut map = ::std::collections::HashMap::new();
+                                #(#inserts)*
+                                Some(map)
+                            };
+                            (pattern, expr_fields)
+                        }
+                        Fields::Unnamed(fields_unnamed) => {
+                            let num = fields_unnamed.unnamed.len();
+                            let field_patterns: Vec<_> = (0..num).map(|i| format_ident!("f{}", i)).collect();
+                            let pattern = quote! { Self::#var_ident(#(#field_patterns),*) };
+                            let inserts = (0..num).zip(&field_patterns).map(|(i, ident)| {
+                                let i_lit = LitStr::new(&i.to_string(), Span::call_site());
+                                quote! { map.insert(#i_lit.to_string(), #ident.to_string()); }
+                            });
+                            let expr_fields = quote! {
+                                let mut map = ::std::collections::HashMap::new();
+                                #(#inserts)*
+                                Some(map)
+                            };
+                            (pattern, expr_fields)
+                        }
+                    }
+                };
+
+                let response_arm = quote! {
+                    #pattern => {
+                        let code = #err_name_lit.to_string();
+                        let message = self.to_string();
+                        let fields = #expr_fields;
+                        let result = ntex_error::NtexErrorResponse { code, message, fields };
+                        ntex::web::HttpResponse::build(self.status_code()).json(&result)
+                    }
+                };
+                arms_error_response.push(response_arm);
+            }
         }
     } else {
         return syn::Error::new_spanned(name, "NtexError only works on enums").to_compile_error().into();
@@ -193,18 +208,9 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                 }
             }
             fn error_response(&self, req: &ntex::web::HttpRequest) -> ntex::web::HttpResponse {
-                let code = match self {
-                    #(#arms_name)*
-                };
-                let fields = match self {
-                    #(#arms_fields)*
-                };
-                let result = NtexErrorResponse {
-                    code:    code.to_string(),
-                    message: self.to_string(),
-                    fields,
-                };
-                ntex::web::HttpResponse::build(self.status_code()).json(&result)
+                match self {
+                    #(#arms_error_response)*
+                }
             }
         }
     };
