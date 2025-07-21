@@ -34,7 +34,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
             let var_ident = &variant.ident;
             let mut status = quote! { ntex::http::StatusCode::INTERNAL_SERVER_ERROR };
             let mut err_name = to_snake_case(&var_ident.to_string());
-
+            let mut delegate = false;
             let mut has_from_attr = false;
             let mut include_fields = true;
 
@@ -58,6 +58,8 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                             include_fields = true;
                         } else if meta.path.is_ident("skip_fields") {
                             include_fields = false;
+                        } else if meta.path.is_ident("delegate") {
+                            delegate = true;
                         }
                         Ok(())
                     });
@@ -94,9 +96,8 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                 _ => {}
             }
 
-            // If #[from] is present, disable fields by default unless explicitly overridden
+            // If #[from], disable fields by default unless explicitly overridden
             if has_from_attr {
-                // Only include fields if explicitly requested with include_fields
                 include_fields = variant.attrs.iter().any(|attr| {
                     if attr.path().is_ident("ntex_response") {
                         let mut found_include = false;
@@ -113,34 +114,29 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                 });
             }
 
-            let is_wrapper = matches!(&variant.fields, Fields::Unnamed(f) if f.unnamed.len() == 1) && has_from_attr;
+            let is_wrapper = matches!(&variant.fields, Fields::Unnamed(f) if f.unnamed.len() == 1);
+
+            let is_delegate = delegate && is_wrapper;
 
             let err_name_lit = LitStr::new(&err_name, Span::call_site());
 
-            // Status arm
-            let status_arm = if is_wrapper {
-                quote! {
+            if is_delegate {
+                arms_status.push(quote! {
                     Self::#var_ident(ref inner) => inner.status_code(),
-                }
+                });
+                arms_error_response.push(quote! {
+                    Self::#var_ident(ref inner) => inner.error_response(req),
+                });
             } else {
-                let pattern = match &variant.fields {
+                let pattern_for_status = match &variant.fields {
                     Fields::Unnamed(_) => quote! { Self::#var_ident(..) },
                     Fields::Named(_) => quote! { Self::#var_ident { .. } },
                     Fields::Unit => quote! { Self::#var_ident },
                 };
-                quote! {
-                    #pattern => #status,
-                }
-            };
-            arms_status.push(status_arm);
+                arms_status.push(quote! {
+                    #pattern_for_status => #status,
+                });
 
-            // Error response arm
-            if is_wrapper {
-                let wrapper_arm = quote! {
-                    Self::#var_ident(ref inner) => inner.error_response(req),
-                };
-                arms_error_response.push(wrapper_arm);
-            } else {
                 let (pattern, expr_fields) = if !include_fields {
                     let pattern = match &variant.fields {
                         Fields::Unit => quote! { Self::#var_ident },
@@ -171,8 +167,12 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                             let field_patterns: Vec<_> = (0..num).map(|i| format_ident!("f{}", i)).collect();
                             let pattern = quote! { Self::#var_ident(#(#field_patterns),*) };
                             let inserts = (0..num).zip(&field_patterns).map(|(i, ident)| {
-                                let i_lit = LitStr::new(&i.to_string(), Span::call_site());
-                                quote! { map.insert(#i_lit.to_string(), #ident.to_string()); }
+                                let key_lit = if num == 1 && has_from_attr {
+                                    LitStr::new("cause", Span::call_site())
+                                } else {
+                                    LitStr::new(&i.to_string(), Span::call_site())
+                                };
+                                quote! { map.insert(#key_lit.to_string(), #ident.to_string()); }
                             });
                             let expr_fields = quote! {
                                 let mut map = ::std::collections::HashMap::new();
@@ -189,7 +189,11 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                         let code = #err_name_lit.to_string();
                         let message = self.to_string();
                         let fields = #expr_fields;
-                        let result = ntex_error::NtexErrorResponse { code, message, fields };
+                        let result = shl_ntex::error::NtexErrorResponse {
+                            code,
+                            message,
+                            fields,
+                        };
                         ntex::web::HttpResponse::build(self.status_code()).json(&result)
                     }
                 };
