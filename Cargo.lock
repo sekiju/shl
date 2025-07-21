@@ -2275,6 +2275,7 @@ dependencies = [
  "ntex",
  "ntex-error-macro",
  "serde",
+ "thiserror",
  "utoipa",
 ]
 

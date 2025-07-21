@@ -1,13 +1,13 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, quote};
-use syn::{Data, DeriveInput, Fields, LitStr, parse_macro_input, Expr};
+use syn::{Data, DeriveInput, Expr, Fields, LitStr, parse_macro_input};
 
 fn to_snake_case(s: &str) -> String {
     let mut result = String::new();
-    let mut chars = s.chars().peekable();
+    let chars = s.chars().peekable();
 
-    while let Some(ch) = chars.next() {
+    for ch in chars {
         if ch.is_uppercase() {
             if !result.is_empty() && !result.ends_with('_') {
                 result.push('_');
@@ -34,7 +34,7 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
             let var_ident = &variant.ident;
             let mut status = quote! { ntex::http::StatusCode::INTERNAL_SERVER_ERROR };
             let mut err_name = to_snake_case(&var_ident.to_string());
-            let mut delegate = false;
+            let mut transparent = false;
             let mut has_from_attr = false;
             let mut include_fields = true;
 
@@ -58,8 +58,8 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                             include_fields = true;
                         } else if meta.path.is_ident("skip_fields") {
                             include_fields = false;
-                        } else if meta.path.is_ident("delegate") {
-                            delegate = true;
+                        } else if meta.path.is_ident("transparent") {
+                            transparent = true;
                         }
                         Ok(())
                     });
@@ -116,16 +116,16 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
 
             let is_wrapper = matches!(&variant.fields, Fields::Unnamed(f) if f.unnamed.len() == 1);
 
-            let is_delegate = delegate && is_wrapper;
+            let is_transparent = transparent && is_wrapper;
 
             let err_name_lit = LitStr::new(&err_name, Span::call_site());
 
-            if is_delegate {
+            if is_transparent {
                 arms_status.push(quote! {
-                    Self::#var_ident(ref inner) => inner.status_code(),
+                    Self::#var_ident(inner) => inner.status_code(),
                 });
                 arms_error_response.push(quote! {
-                    Self::#var_ident(ref inner) => inner.error_response(req),
+                    Self::#var_ident(inner) => inner.error_response(req),
                 });
             } else {
                 let pattern_for_status = match &variant.fields {
@@ -156,9 +156,11 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                                 quote! { map.insert(stringify!(#ident).to_string(), #ident.to_string()); }
                             });
                             let expr_fields = quote! {
-                                let mut map = ::std::collections::HashMap::new();
-                                #(#inserts)*
-                                Some(map)
+                                {
+                                    let mut map = ::std::collections::HashMap::new();
+                                    #(#inserts)*
+                                    Some(map)
+                                }
                             };
                             (pattern, expr_fields)
                         }
@@ -175,9 +177,11 @@ pub fn derive_ntex_response_error(input: TokenStream) -> TokenStream {
                                 quote! { map.insert(#key_lit.to_string(), #ident.to_string()); }
                             });
                             let expr_fields = quote! {
-                                let mut map = ::std::collections::HashMap::new();
-                                #(#inserts)*
-                                Some(map)
+                                {
+                                    let mut map = ::std::collections::HashMap::new();
+                                    #(#inserts)*
+                                    Some(map)
+                                }
                             };
                             (pattern, expr_fields)
                         }
