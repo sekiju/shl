@@ -1,13 +1,4 @@
-use sqlx::{Executor, Postgres};
-
-#[derive(Debug, thiserror::Error)]
-pub enum CrudError {
-    #[error(transparent)]
-    Sqlx(#[from] sqlx::Error),
-
-    #[error("no rows affected")]
-    NoRows,
-}
+use sqlx::{Error, Executor, Postgres};
 
 pub trait TableMeta: Sized {
     const QUAL_TABLE: &'static str;
@@ -20,29 +11,29 @@ pub trait Readable: TableMeta {
     const SQL_SELECT_BY_PK: &'static str;
     const SQL_DELETE_BY_PK: &'static str;
 
-    async fn find_by_id<'e, E>(exec: E, id: Self::Id) -> Result<Self, CrudError>
+    fn find_by_id<'e, E>(exec: E, id: Self::Id) -> impl Future<Output = Result<Self, Error>> + Send + 'e
     where
-        Self: Sized,
-        E: Executor<'e, Database = Postgres> + Send;
+        Self: Sized + 'e,
+        E: Executor<'e, Database = Postgres> + Send + 'e;
 
-    async fn delete_by_id<'e, E>(exec: E, id: Self::Id) -> Result<u64, CrudError>
+    fn delete_by_id<'e, E>(exec: E, id: Self::Id) -> impl Future<Output = Result<u64, Error>> + Send + 'e
     where
-        E: Executor<'e, Database = Postgres> + Send;
+        E: Executor<'e, Database = Postgres> + Send + 'e;
 }
 
 pub trait Insertable: TableMeta {
     const INSERT_COLS: &'static [&'static str];
     const SQL_INSERT: &'static str;
 
-    async fn insert<'e, E>(&self, exec: E) -> Result<u64, CrudError>
+    fn insert<'e, E>(&'e self, exec: E) -> impl Future<Output = Result<u64, Error>> + Send + 'e
     where
-        E: Executor<'e, Database = Postgres> + Send;
+        E: Executor<'e, Database = Postgres> + Send + 'e;
 }
 
 pub trait Updatable: TableMeta {
     const SQL_UPDATE: &'static str;
 
-    async fn update<'e, E>(&self, exec: E) -> Result<u64, CrudError>
+    fn update<'e, E>(&'e self, exec: E) -> impl Future<Output = Result<u64, Error>> + Send + 'e
     where
-        E: Executor<'e, Database = Postgres> + Send;
+        E: Executor<'e, Database = Postgres> + Send + 'e;
 }

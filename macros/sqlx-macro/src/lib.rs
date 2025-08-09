@@ -298,14 +298,14 @@ pub fn derive_table(input: TokenStream) -> TokenStream {
             const SQL_SELECT_BY_PK: &'static str = #select_lit;
             const SQL_DELETE_BY_PK: &'static str = #delete_lit;
 
-            async fn find_by_id<'e, E>(exec: E, id: <Self as shl_sqlx::postgres::TableMeta>::Id) -> Result<Self, shl_sqlx::postgres::CrudError>
+            async fn find_by_id<'e, E>(exec: E, id: <Self as shl_sqlx::postgres::TableMeta>::Id) -> Result<Self, sqlx::Error>
             where E: sqlx::Executor<'e, Database = sqlx::Postgres> + Send {
                 #bind_select
                 let row = q.fetch_one(exec).await?;
                 Ok(row)
             }
 
-            async fn delete_by_id<'e, E>(exec: E, id: <Self as shl_sqlx::postgres::TableMeta>::Id) -> Result<u64, shl_sqlx::postgres::CrudError>
+            async fn delete_by_id<'e, E>(exec: E, id: <Self as shl_sqlx::postgres::TableMeta>::Id) -> Result<u64, sqlx::Error>
             where E: sqlx::Executor<'e, Database = sqlx::Postgres> + Send {
                 #bind_delete
                 let res = q.execute(exec).await?;
@@ -361,7 +361,7 @@ pub fn derive_insertable(input: TokenStream) -> TokenStream {
             const INSERT_COLS: &'static [&'static str] = &[ #( #insert_cols_arr ),* ];
             const SQL_INSERT: &'static str = #sql_insert_lit;
 
-            async fn insert<'e, E>(&self, exec: E) -> Result<u64, shl_sqlx::postgres::CrudError>
+            async fn insert<'e, E>(&self, exec: E) -> Result<u64, sqlx::Error>
             where E: sqlx::Executor<'e, Database = sqlx::Postgres> + Send {
                 let mut q = sqlx::query(Self::SQL_INSERT);
                 #( #bind_fields )*
@@ -438,7 +438,7 @@ pub fn derive_updatable(input: TokenStream) -> TokenStream {
         impl shl_sqlx::postgres::Updatable for #ident {
             const SQL_UPDATE: &'static str = #sql_update_lit;
 
-            async fn update<'e, E>(&self, exec: E) -> Result<u64, shl_sqlx::postgres::CrudError>
+            async fn update<'e, E>(&self, exec: E) -> Result<u64, sqlx::Error>
             where E: sqlx::Executor<'e, Database = sqlx::Postgres> + Send {
                 let mut q = sqlx::query(Self::SQL_UPDATE);
                 #( #bind_upd )*
