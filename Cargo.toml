@@ -1,9 +1,10 @@
 [workspace]
 members = [
     "macros/ntex-error-macro",
+    "macros/redis-cache-macro",
+    "macros/sqlx-macro",
     "shl-ntex",
     "shl-observability",
-    "macros/redis-cache-macro",
     "shl-redis-cache-service",
     "shl-sqlx",
 ]

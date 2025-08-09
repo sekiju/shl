@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! impl_string_varchar {
+macro_rules! impl_to_string_varchar {
     ($name:ident) => {
         impl sqlx::Type<sqlx::Postgres> for $name {
             fn type_info() -> sqlx::postgres::PgTypeInfo {
