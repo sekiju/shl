@@ -14,12 +14,12 @@ once_cell = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
 sqlx = "0.8"
 sqlx-macro = { path = "../macros/sqlx-macro", optional = true }
-uuid = { version = "1", features = ["v7"], optional = true }
 thiserror = "2.0.12"
+uuid = { version = "1", features = ["v7"], optional = true }
 
 [dev-dependencies]
-tokio = { version = "1.47", features = ["macros", "rt-multi-thread"] }
 sqlx = { version = "0.8", features = ["chrono", "postgres", "uuid", "runtime-tokio-native-tls"] }
+tokio = { version = "1.47", features = ["macros", "rt-multi-thread"] }
 
 [[example]]
 name = "postgres_crud"

@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
+use shl_sqlx::postgres::{Insertable, Readable, Updatable};
 use shl_sqlx::uuid::uuidv7_and_created_at;
+use shl_sqlx::{Insertable, Table, Updatable};
 use sqlx::FromRow;
 use uuid::Uuid;
-use shl_sqlx::{Table, Insertable, Updatable};
-use shl_sqlx::postgres::{Readable, Insertable, Updatable};
 
 #[derive(Debug, FromRow, Table, Insertable, Updatable)]
 pub struct User {

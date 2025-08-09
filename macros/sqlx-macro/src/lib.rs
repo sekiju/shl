@@ -1,8 +1,13 @@
 use proc_macro::TokenStream;
-use proc_macro_error::{proc_macro_error, abort};
+use proc_macro_error::{abort, proc_macro_error};
 use quote::quote;
-use syn::{parse::{Parse, ParseStream}, punctuated::Punctuated, token::Comma, Attribute, Data, DeriveInput, Ident, LitStr, Token, Result as SynResult, Fields, MetaNameValue, Lit, Meta};
 use syn::spanned::Spanned;
+use syn::{
+    Attribute, Data, DeriveInput, Fields, Ident, Lit, LitStr, Meta, MetaNameValue, Result as SynResult, Token,
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
+    token::Comma,
+};
 
 #[derive(Default, Clone)]
 struct ModelCfg {
@@ -48,7 +53,8 @@ impl Parse for TableArg {
             }
         }
         if key == "pk" {
-            let content; syn::parenthesized!(content in input);
+            let content;
+            syn::parenthesized!(content in input);
             let list = Punctuated::parse_terminated(&content)?;
             return Ok(TableArg::PkList(list));
         }
@@ -76,13 +82,19 @@ fn to_snake_plural(name: &str) -> String {
     let mut out = String::new();
     for (i, ch) in name.chars().enumerate() {
         if ch.is_uppercase() {
-            if i > 0 { out.push('_'); }
-            for lc in ch.to_lowercase() { out.push(lc); }
+            if i > 0 {
+                out.push('_');
+            }
+            for lc in ch.to_lowercase() {
+                out.push(lc);
+            }
         } else {
             out.push(ch);
         }
     }
-    if !out.ends_with('s') { out.push('s'); }
+    if !out.ends_with('s') {
+        out.push('s');
+    }
     out
 }
 
@@ -90,7 +102,9 @@ fn unquote(s: &str) -> String {
     s.trim_matches('"').to_string()
 }
 
-struct TableArgs { items: Punctuated<TableArg, Token![,]> }
+struct TableArgs {
+    items: Punctuated<TableArg, Token![,]>,
+}
 
 impl Parse for TableArgs {
     fn parse(input: ParseStream) -> SynResult<Self> {
@@ -104,7 +118,9 @@ fn parse_model_cfg(attrs: &[Attribute], ty_ident: &Ident) -> SynResult<ModelCfg>
     let mut cfg = ModelCfg::apply_default(ty_ident);
 
     for attr in attrs {
-        if !attr.path().is_ident("table") { continue; }
+        if !attr.path().is_ident("table") {
+            continue;
+        }
 
         let args: TableArgs = attr.parse_args()?;
         for item in args.items {
@@ -132,9 +148,13 @@ fn parse_model_cfg(attrs: &[Attribute], ty_ident: &Ident) -> SynResult<ModelCfg>
 
 fn field_rename(attrs: &Vec<Attribute>, fallback: &str) -> String {
     for a in attrs {
-        if !a.path().is_ident("table") { continue; }
+        if !a.path().is_ident("table") {
+            continue;
+        }
         let parsed = a.parse_args_with(|input: ParseStream| -> syn::Result<Option<String>> {
-            if input.is_empty() { return Ok(None); }
+            if input.is_empty() {
+                return Ok(None);
+            }
             let key: syn::Ident = input.parse()?;
             if key == "rename" {
                 input.parse::<Token![=]>()?;
@@ -144,15 +164,24 @@ fn field_rename(attrs: &Vec<Attribute>, fallback: &str) -> String {
                 Ok(None)
             }
         });
-        if let Ok(Some(name)) = parsed { return name; }
+        if let Ok(Some(name)) = parsed {
+            return name;
+        }
     }
     fallback.to_string()
 }
 
 fn pk_ty_tokens(pk_types: &Vec<syn::Type>) -> proc_macro2::TokenStream {
     match pk_types.len() {
-        1 => { let a = &pk_types[0]; quote!{ #a } },
-        2 => { let a = &pk_types[0]; let b = &pk_types[1]; quote!{ (#a, #b) } },
+        1 => {
+            let a = &pk_types[0];
+            quote! { #a }
+        }
+        2 => {
+            let a = &pk_types[0];
+            let b = &pk_types[1];
+            quote! { (#a, #b) }
+        }
         _ => abort!(proc_macro2::Span::call_site(), "only 1-2 PK columns are supported"),
     }
 }
@@ -165,19 +194,35 @@ fn where_pk(pk_cols_sql: &Vec<String>) -> String {
     }
 }
 
-fn placeholders(n: usize) -> String { (1..=n).map(|i| format!("${}", i)).collect::<Vec<_>>().join(", ") }
+fn placeholders(n: usize) -> String {
+    (1..=n).map(|i| format!("${}", i)).collect::<Vec<_>>().join(", ")
+}
 
-struct ColInfo { rs_ident: Ident, sql_quoted: String, ty: syn::Type }
+struct ColInfo {
+    rs_ident: Ident,
+    sql_quoted: String,
+    ty: syn::Type,
+}
 
 fn collect(input: &DeriveInput, cfg: &ModelCfg) -> (Vec<ColInfo>, Vec<Ident>, Vec<String>, Vec<Ident>, Vec<syn::Type>) {
-    let ds = match &input.data { Data::Struct(ds) => ds, _ => abort!(input.span(), "only structs are supported") };
-    let named = match &ds.fields { Fields::Named(n) => &n.named, _ => abort!(ds.struct_token.span, "named fields are required") };
+    let ds = match &input.data {
+        Data::Struct(ds) => ds,
+        _ => abort!(input.span(), "only structs are supported"),
+    };
+    let named = match &ds.fields {
+        Fields::Named(n) => &n.named,
+        _ => abort!(ds.struct_token.span, "named fields are required"),
+    };
 
     let mut cols = Vec::<ColInfo>::new();
     for f in named.iter() {
         let name = f.ident.clone().unwrap();
         let col = field_rename(&f.attrs, &name.to_string());
-        cols.push(ColInfo { rs_ident: name, sql_quoted: format!("\"{}\"", col), ty: f.ty.clone() });
+        cols.push(ColInfo {
+            rs_ident: name,
+            sql_quoted: format!("\"{}\"", col),
+            ty: f.ty.clone(),
+        });
     }
 
     let mut pk_idents = Vec::<Ident>::new();
@@ -187,10 +232,17 @@ fn collect(input: &DeriveInput, cfg: &ModelCfg) -> (Vec<ColInfo>, Vec<Ident>, Ve
         for f in named.iter() {
             let nm = f.ident.as_ref().unwrap();
             let col_name = field_rename(&f.attrs, &nm.to_string());
-            if &nm.to_string() == pk || &col_name == pk { found = Some((nm.clone(), f.ty.clone())); break; }
+            if &nm.to_string() == pk || &col_name == pk {
+                found = Some((nm.clone(), f.ty.clone()));
+                break;
+            }
         }
-        if let Some((id, ty)) = found { pk_idents.push(id); pk_types.push(ty); }
-        else { abort!(input.span(), format!("pk field '{}' not found", pk)); }
+        if let Some((id, ty)) = found {
+            pk_idents.push(id);
+            pk_types.push(ty);
+        } else {
+            abort!(input.span(), format!("pk field '{}' not found", pk));
+        }
     }
 
     let rs_names = cols.iter().map(|c| c.rs_ident.clone()).collect::<Vec<_>>();
@@ -277,16 +329,27 @@ pub fn derive_insertable(input: TokenStream) -> TokenStream {
 
     let (cols, _rs_names, cols_sql, _pk_idents, _pk_types) = collect(&input, &cfg);
 
-    let insert_cols: Vec<_> = cols_sql.iter().filter(|c| !cfg.insert_skip.iter().any(|s| s == &unquote(c))).cloned().collect();
-    let insert_fields: Vec<Ident> = cols.iter()
+    let insert_cols: Vec<_> = cols_sql
+        .iter()
+        .filter(|c| !cfg.insert_skip.iter().any(|s| s == &unquote(c)))
+        .cloned()
+        .collect();
+    let insert_fields: Vec<Ident> = cols
+        .iter()
         .filter(|ci| !cfg.insert_skip.iter().any(|s| s == &unquote(&ci.sql_quoted)))
-        .map(|ci| ci.rs_ident.clone()).collect();
+        .map(|ci| ci.rs_ident.clone())
+        .collect();
 
     let qual_table = format!("\"{}\".\"{}\"", cfg.schema, cfg.table);
     let sql_insert = if insert_cols.is_empty() {
         format!("INSERT INTO {} DEFAULT VALUES", qual_table)
     } else {
-        format!("INSERT INTO {} ({} ) VALUES ({})", qual_table, insert_cols.join(", "), placeholders(insert_cols.len()))
+        format!(
+            "INSERT INTO {} ({} ) VALUES ({})",
+            qual_table,
+            insert_cols.join(", "),
+            placeholders(insert_cols.len())
+        )
     };
     let sql_insert_lit = syn::LitStr::new(&sql_insert, input.span());
 
@@ -322,30 +385,52 @@ pub fn derive_updatable(input: TokenStream) -> TokenStream {
     };
     let (cols, _rs_names, cols_sql, pk_idents, _pk_types) = collect(&input, &cfg);
 
-    let upd_cols: Vec<&ColInfo> = cols.iter()
-        .filter(|ci| !cfg.skip_update.iter().any(|s| s == &ci.rs_ident.to_string() || s == &unquote(&ci.sql_quoted)))
+    let upd_cols: Vec<&ColInfo> = cols
+        .iter()
+        .filter(|ci| {
+            !cfg.skip_update
+                .iter()
+                .any(|s| s == &ci.rs_ident.to_string() || s == &unquote(&ci.sql_quoted))
+        })
         .collect();
 
-    if upd_cols.is_empty() { abort!(input.span(), "no fields to UPDATE (all are in skip_update)"); }
+    if upd_cols.is_empty() {
+        abort!(input.span(), "no fields to UPDATE (all are in skip_update)");
+    }
 
-    let set_list: Vec<String> = upd_cols.iter().enumerate()
-        .map(|(i, ci)| format!("{} = ${}", ci.sql_quoted, i+1)).collect();
+    let set_list: Vec<String> = upd_cols
+        .iter()
+        .enumerate()
+        .map(|(i, ci)| format!("{} = ${}", ci.sql_quoted, i + 1))
+        .collect();
 
     let qual_table = format!("\"{}\".\"{}\"", cfg.schema, cfg.table);
 
     let mut where_s = String::new();
     for (i, pk) in cfg.pk_cols.iter().enumerate() {
-        if i > 0 { where_s.push_str(" AND "); }
+        if i > 0 {
+            where_s.push_str(" AND ");
+        }
         where_s.push_str(&format!("\"{}\" = ${}", pk, i + upd_cols.len() + 1));
     }
     let sql_update = format!("UPDATE {} SET {} WHERE {}", qual_table, set_list.join(", "), where_s);
     let sql_update_lit = syn::LitStr::new(&sql_update, input.span());
 
-    let bind_upd = upd_cols.iter().map(|ci| { let id = ci.rs_ident.clone(); quote!{ q = q.bind(&self.#id); } });
+    let bind_upd = upd_cols.iter().map(|ci| {
+        let id = ci.rs_ident.clone();
+        quote! { q = q.bind(&self.#id); }
+    });
 
     let bind_pk = match pk_idents.len() {
-        1 => { let a = pk_idents[0].clone(); quote!{ q = q.bind(&self.#a); } },
-        2 => { let a = pk_idents[0].clone(); let b = pk_idents[1].clone(); quote!{ q = q.bind(&self.#a); q = q.bind(&self.#b); } },
+        1 => {
+            let a = pk_idents[0].clone();
+            quote! { q = q.bind(&self.#a); }
+        }
+        2 => {
+            let a = pk_idents[0].clone();
+            let b = pk_idents[1].clone();
+            quote! { q = q.bind(&self.#a); q = q.bind(&self.#b); }
+        }
         _ => abort!(input.span(), "only 1-2 PK columns are supported"),
     };
 

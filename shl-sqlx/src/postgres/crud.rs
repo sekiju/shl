@@ -1,10 +1,10 @@
-use sqlx::{Postgres, Executor};
+use sqlx::{Executor, Postgres};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CrudError {
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
-    
+
     #[error("no rows affected")]
     NoRows,
 }
@@ -38,7 +38,6 @@ pub trait Insertable: TableMeta {
     where
         E: Executor<'e, Database = Postgres> + Send;
 }
-
 
 pub trait Updatable: TableMeta {
     const SQL_UPDATE: &'static str;

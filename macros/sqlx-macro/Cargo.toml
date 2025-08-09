@@ -8,7 +8,7 @@ publish.workspace = true
 proc-macro = true
 
 [dependencies]
+proc-macro-error = "1.0.4"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full"] }
-proc-macro-error = "1.0.4"

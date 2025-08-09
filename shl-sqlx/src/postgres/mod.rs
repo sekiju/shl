@@ -1,5 +1,5 @@
-pub mod macros;
 mod crud;
+pub mod macros;
 
-pub use macros::*;
 pub use crud::*;
+pub use macros::*;

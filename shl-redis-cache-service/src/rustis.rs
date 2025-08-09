@@ -1,8 +1,8 @@
-use std::sync::Arc;
 use crate::{CacheClient, CacheService, Error};
 use async_trait::async_trait;
 use rustis::client::Client;
 use rustis::commands::{GenericCommands, ScanOptions, StringCommands};
+use std::sync::Arc;
 
 pub type RedisCacheService = Arc<CacheService<Client>>;
 
