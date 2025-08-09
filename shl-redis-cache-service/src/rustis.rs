@@ -1,7 +1,10 @@
-use crate::{CacheClient, Error};
+use std::sync::Arc;
+use crate::{CacheClient, CacheService, Error};
 use async_trait::async_trait;
 use rustis::client::Client;
 use rustis::commands::{GenericCommands, ScanOptions, StringCommands};
+
+pub type RedisCacheService = Arc<CacheService<Client>>;
 
 #[async_trait]
 impl CacheClient for Client {

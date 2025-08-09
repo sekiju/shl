@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 #[cfg(feature = "macro")]
-pub use shl_redis_cache_macro::*;
+pub use redis_cache_macro::*;
 
 pub mod error;
 #[cfg(feature = "rustis")]

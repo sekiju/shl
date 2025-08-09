@@ -5,7 +5,7 @@ edition.workspace = true
 publish.workspace = true
 
 [features]
-macro = ["dep:shl-redis-cache-macro"]
+macro = ["dep:redis-cache-macro"]
 rustis = ["dep:rustis"]
 
 [dependencies]
@@ -13,5 +13,5 @@ async-trait = "0.1"
 rustis = { version = "0.16", optional = true }
 serde = "1"
 serde_json = "1"
-shl-redis-cache-macro = { path = "../shl-redis-cache-macro", optional = true }
+redis-cache-macro = { path = "../macros/redis-cache-macro", optional = true }
 thiserror = "2"

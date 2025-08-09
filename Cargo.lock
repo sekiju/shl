@@ -1911,6 +1911,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "redis-cache-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2008,31 +2017,6 @@ name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
-
-[[package]]
-name = "rustis"
-version = "0.15.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05d94d79e38f4b6d0bafc45802df9d4460217f0fb350d3660aaadf03aa96b81b"
-dependencies = [
- "atoi",
- "bytes",
- "crc16",
- "dtoa",
- "fast-float2",
- "futures-channel",
- "futures-util",
- "itoa",
- "log",
- "memchr",
- "rand 0.9.1",
- "serde",
- "smallvec",
- "socket2 0.6.0",
- "tokio",
- "tokio-util",
- "url",
-]
 
 [[package]]
 name = "rustis"
@@ -2292,45 +2276,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "shl-redis-cache-macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
-
-[[package]]
 name = "shl-redis-cache-service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "rustis 0.16.1",
+ "redis-cache-macro",
+ "rustis",
  "serde",
  "serde_json",
- "shl-redis-cache-macro",
  "thiserror",
-]
-
-[[package]]
-name = "shl-service-cache"
-version = "0.1.0"
-dependencies = [
- "rustis 0.15.2",
- "serde",
- "serde_json",
- "shl-service-cache-macro",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "shl-service-cache-macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.101",
 ]
 
 [[package]]

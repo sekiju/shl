@@ -3,10 +3,8 @@ members = [
     "macros/ntex-error-macro",
     "shl-ntex",
     "shl-observability",
-    "shl-redis-cache-macro",
+    "macros/redis-cache-macro",
     "shl-redis-cache-service",
-    "shl-service-cache",
-    "shl-service-cache-macro",
     "shl-sqlx",
 ]
 resolver = "3"
